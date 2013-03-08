@@ -25,7 +25,9 @@ INCLUDE(Find_VTK)
 set(CMAKE_C_FLAGS " -Wno-deprecated -fno-gnu-keywords -w")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 
-# Executable
+
+#########################################################
+#! # Executable
+#########################################################
 ADD_EXECUTABLE(vtkFVR vtkFVR.cxx)
-TARGET_LINK_LIBRARIES(vtkFVR ${VTK_FOUND_LIBS})
 
