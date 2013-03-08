@@ -13,6 +13,7 @@
 #include <vtkFixedPointVolumeRayCastMapper.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkTesting.h>
+#include <vtkVolumeRayCastMapper.h>
 
 int main(int argc, char *argv[])
 {
@@ -24,8 +25,6 @@ int main(int argc, char *argv[])
 
     // vtk data file
     std::string filename = argv[1];
-
-    // Create the renderers, render window, and interactor
 
     // Rendering window
     vtkSmartPointer<vtkRenderWindow> renderingWindow =
@@ -55,12 +54,19 @@ int main(int argc, char *argv[])
     // Updating the reader
     dataReader->Update();
 
+
+    // Get the data in the file
+
+
+
+
+
     // Create a transfer function mapping scalar value to opacity values
     vtkSmartPointer<vtkPiecewiseFunction> opacityTF =
             vtkSmartPointer<vtkPiecewiseFunction>::New();
 
     // Adding a segment to the opacity transfer function
-    opacityTF->AddSegment(0, 1.0, 256, 0.1);
+    opacityTF->AddSegment(0, 1.0, 256, 0.6);
 
     // creating a RGB color transfer function
     vtkSmartPointer<vtkColorTransferFunction> colorTF =
@@ -69,13 +75,6 @@ int main(int argc, char *argv[])
     // Adding 2 sample pointsto the color TF
     colorTF->AddRGBPoint(   0, 1.0, 1.0, 1.0 );
     colorTF->AddRGBPoint( 255, 1.0, 0.0, 1.0 );
-
-    // Need to crop to actually see minimum intensity
-    vtkSmartPointer<vtkImageClip> clip =
-            vtkSmartPointer<vtkImageClip>::New();
-    clip->SetInputConnection( dataReader->GetOutputPort() );
-    clip->SetOutputWholeExtent(0,66,0,66,30,37);
-    clip->ClipDataOn();
 
     // Property
     vtkSmartPointer<vtkVolumeProperty> property =
@@ -94,10 +93,10 @@ int main(int argc, char *argv[])
             vtkSmartPointer<vtkFixedPointVolumeRayCastMapper>::New();
 
     // min intensity blending
-    raycastingMapper->SetBlendModeToMinimumIntensity();
+    raycastingMapper->SetBlendModeToAdditive();
 
-    // Clipping
-    raycastingMapper->SetInputConnection( clip->GetOutputPort() );
+    // Get the volume from the data reader directly
+    raycastingMapper->SetInputConnection(dataReader->GetOutputPort());
 
     // Creating a vtk volume
     vtkSmartPointer<vtkVolume> volume =

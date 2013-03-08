@@ -29,5 +29,5 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 #########################################################
 #! # Executable
 #########################################################
-ADD_EXECUTABLE(vtkFVR vtkFVR.cxx)
+ADD_EXECUTABLE(vtkFVR vtkFVR.cxx rawToVTK.cxx)
 
