@@ -18,64 +18,105 @@ int main(int argc, char *argv[])
 {
     if(argc < 2)
     {
-        std::cerr << "Required arguments: vtkFile" << std::endl;
+        std::cerr << "vtkFile is required " << std::endl;
         return EXIT_FAILURE;
     }
 
-    std::string filename = argv[1]; //  "/Data/ironProt.vtk";
+    // vtk data file
+    std::string filename = argv[1];
 
     // Create the renderers, render window, and interactor
-    vtkSmartPointer<vtkRenderWindow> renWin =
+
+    // Rendering window
+    vtkSmartPointer<vtkRenderWindow> renderingWindow =
             vtkSmartPointer<vtkRenderWindow>::New();
-    vtkSmartPointer<vtkRenderWindowInteractor> iren =
+
+    // Render interactor
+    vtkSmartPointer<vtkRenderWindowInteractor> renderInteractor =
             vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    iren->SetRenderWindow(renWin);
-    vtkSmartPointer<vtkRenderer> ren =
+
+    // Set the interactor to the rendering window
+    renderInteractor->SetRenderWindow(renderingWindow);
+
+    // Create a renderer
+    vtkSmartPointer<vtkRenderer> renderer =
             vtkSmartPointer<vtkRenderer>::New();
-    renWin->AddRenderer(ren);
+
+    // Add the renderer to the render window
+    renderingWindow->AddRenderer(renderer);
 
     // Read the data from a vtk file
-    vtkSmartPointer<vtkStructuredPointsReader> reader =
+    vtkSmartPointer<vtkStructuredPointsReader> dataReader =
             vtkSmartPointer<vtkStructuredPointsReader>::New();
-    reader->SetFileName(filename.c_str());
-    reader->Update();
 
-    // Create a transfer function mapping scalar value to opacity
-    vtkSmartPointer<vtkPiecewiseFunction> oTFun =
+    // Passing the file to the data reader
+    dataReader->SetFileName(filename.c_str());
+
+    // Updating the reader
+    dataReader->Update();
+
+    // Create a transfer function mapping scalar value to opacity values
+    vtkSmartPointer<vtkPiecewiseFunction> opacityTF =
             vtkSmartPointer<vtkPiecewiseFunction>::New();
-    oTFun->AddSegment(0, 1.0, 256, 0.1);
 
-    vtkSmartPointer<vtkColorTransferFunction> cTFun =
+    // Adding a segment to the opacity transfer function
+    opacityTF->AddSegment(0, 1.0, 256, 0.1);
+
+    // creating a RGB color transfer function
+    vtkSmartPointer<vtkColorTransferFunction> colorTF =
             vtkSmartPointer<vtkColorTransferFunction>::New();
-    cTFun->AddRGBPoint(   0, 1.0, 1.0, 1.0 );
-    cTFun->AddRGBPoint( 255, 1.0, 1.0, 1.0 );
+
+    // Adding 2 sample pointsto the color TF
+    colorTF->AddRGBPoint(   0, 1.0, 1.0, 1.0 );
+    colorTF->AddRGBPoint( 255, 1.0, 0.0, 1.0 );
 
     // Need to crop to actually see minimum intensity
     vtkSmartPointer<vtkImageClip> clip =
             vtkSmartPointer<vtkImageClip>::New();
-    clip->SetInputConnection( reader->GetOutputPort() );
+    clip->SetInputConnection( dataReader->GetOutputPort() );
     clip->SetOutputWholeExtent(0,66,0,66,30,37);
     clip->ClipDataOn();
 
+    // Property
     vtkSmartPointer<vtkVolumeProperty> property =
             vtkSmartPointer<vtkVolumeProperty>::New();
-    property->SetScalarOpacity(oTFun);
-    property->SetColor(cTFun);
+    // Adding the opacity TF
+    property->SetScalarOpacity(opacityTF);
+
+    // Adding the color TF
+    property->SetColor(colorTF);
+
+    // Linear interpolation for the volume s
     property->SetInterpolationTypeToLinear();
 
-    vtkSmartPointer<vtkFixedPointVolumeRayCastMapper> mapper =
+    // Raycasting Mapper
+    vtkSmartPointer<vtkFixedPointVolumeRayCastMapper> raycastingMapper =
             vtkSmartPointer<vtkFixedPointVolumeRayCastMapper>::New();
-    mapper->SetBlendModeToMinimumIntensity();
-    mapper->SetInputConnection( clip->GetOutputPort() );
 
+    // min intensity blending
+    raycastingMapper->SetBlendModeToMinimumIntensity();
+
+    // Clipping
+    raycastingMapper->SetInputConnection( clip->GetOutputPort() );
+
+    // Creating a vtk volume
     vtkSmartPointer<vtkVolume> volume =
             vtkSmartPointer<vtkVolume>::New();
-    volume->SetMapper(mapper);
+
+    // Add the mapper to the volume
+    volume->SetMapper(raycastingMapper);
+
+    // Adding the properties of the volume
     volume->SetProperty(property);
 
-    ren->AddViewProp(volume);
-    renWin->Render();
-    iren->Start();
+    // Adding the volume to the renderer
+    renderer->AddViewProp(volume);
+
+    // Render the volume
+    renderingWindow->Render();
+
+    // Rendering loop
+    renderInteractor->Start();
 
     return EXIT_SUCCESS;
 }
