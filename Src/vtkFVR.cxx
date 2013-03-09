@@ -1,19 +1,4 @@
-#include <vtkSmartPointer.h>
-#include <vtkCamera.h>
-#include <vtkFiniteDifferenceGradientEstimator.h>
-#include <vtkImageClip.h>
-#include <vtkPiecewiseFunction.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkRenderer.h>
-#include <vtkStructuredPoints.h>
-#include <vtkStructuredPointsReader.h>
-#include <vtkVolume.h>
-#include <vtkVolumeProperty.h>
-#include <vtkFixedPointVolumeRayCastMapper.h>
-#include <vtkColorTransferFunction.h>
-#include <vtkTesting.h>
-#include <vtkVolumeRayCastMapper.h>
+#include "vtkInterfaces.h"
 
 int main(int argc, char *argv[])
 {
@@ -54,52 +39,99 @@ int main(int argc, char *argv[])
     // Updating the reader
     dataReader->Update();
 
-    // Create a transfer function mapping scalar value to opacity values
-    vtkSmartPointer<vtkPiecewiseFunction> opacityTF =
-            vtkSmartPointer<vtkPiecewiseFunction>::New();
+    vtkStructuredPoints* volumeSP = dataReader->GetOutput();
 
-    // Adding a segment to the opacity transfer function
-    opacityTF->AddSegment(0, 1.0, 256, 0.6);
 
-    // creating a RGB color transfer function
-    vtkSmartPointer<vtkColorTransferFunction> colorTF =
-            vtkSmartPointer<vtkColorTransferFunction>::New();
+    int* dimensionsVolume = volumeSP->GetDimensions();
+    std::cout << "Volume Dimensions " << std::endl;
+    std::cout << "X:" << dimensionsVolume[0] << std::endl;
+    std::cout << "Y:" << dimensionsVolume[1] << std::endl;
+    std::cout << "Z:" << dimensionsVolume[2] << std::endl;
 
-    // Adding 2 sample pointsto the color TF
-    colorTF->AddRGBPoint(   0, 1.0, 1.0, 1.0 );
-    colorTF->AddRGBPoint( 255, 1.0, 0.0, 1.0 );
+    // Now we have an access to the volume data
+    for (int i = 0; i < dimensionsVolume[0]; i++)
+    {
+        for (int j = 0; j < dimensionsVolume[1]; j++)
+        {
+            for (int k = 0; k < dimensionsVolume[2]; k++)
+            {
+                double* valueVoxel = static_cast <double*> (volumeSP->GetScalarPointer(i, j, k));
+            }
+        }
+    }
+
+
+    // Convert the volume into vtkDataArray or vtkDataImage
+    const int volDims = dimensionsVolume[0] * dimensionsVolume[1] * dimensionsVolume[2];
+
+    vtkImageComplex *Volume, *Spectrum;
+    Volume = (vtkImageComplex*) malloc (sizeof(vtkImageComplex) * (volDims));
+    Spectrum = (vtkImageComplex*) malloc (sizeof(vtkImageComplex) * (volDims));
+
+    // Now we have an access to the volume data
+    int index = 0;
+    for (int i = 0; i < dimensionsVolume[0]; i++)
+    {
+        for (int j = 0; j < dimensionsVolume[1]; j++)
+        {
+            for (int k = 0; k < dimensionsVolume[2]; k++)
+            {
+                double* voxelValue = static_cast <double*> (volumeSP->GetScalarPointer(i, j, k));
+                Volume[index].Real = voxelValue[0];
+                Spectrum[index].Real = 0;
+                Spectrum[index].Imag = 0;
+                index++;
+            }
+        }
+    }
+
+    // Opacity
+    vtkPiecewiseFunction *opacityTransferFunction = vtkPiecewiseFunction::New();
+    opacityTransferFunction->AddPoint(  0.0,  0.0);
+    opacityTransferFunction->AddPoint( 90.0,  0.0);
+    opacityTransferFunction->AddPoint( 137.9, 0.119);
+    opacityTransferFunction->AddPoint(255.0,  0.2);
+
+    // RGB
+    vtkColorTransferFunction *colorTransferFunction = vtkColorTransferFunction::New();
+    colorTransferFunction->AddRGBPoint(0.0,   0.0, 0.0, 1.0);
+    colorTransferFunction->AddRGBPoint(120.0, 1.0, 1.0, 1.0);
+    colorTransferFunction->AddRGBPoint(160.0, 1.0, 1.0, 0.0);
+    colorTransferFunction->AddRGBPoint(200.0, 1.0, 0.0, 0.0);
+    colorTransferFunction->AddRGBPoint(255.0, 0.0, 1.0, 1.0);
+
+    // Gradient
+    vtkPiecewiseFunction *gradientTransferFunction = vtkPiecewiseFunction::New();
+    gradientTransferFunction->AddPoint(  0.0, 0);
+    gradientTransferFunction->AddPoint(  2.5, 0);
+    gradientTransferFunction->AddPoint( 12.7, 1);
+    gradientTransferFunction->AddPoint(255.0, 1);
 
     // Property
-    vtkSmartPointer<vtkVolumeProperty> property =
-            vtkSmartPointer<vtkVolumeProperty>::New();
-    // Adding the opacity TF
-    property->SetScalarOpacity(opacityTF);
+    vtkVolumeProperty *volumeProperty = vtkVolumeProperty::New();
+    volumeProperty->SetColor(colorTransferFunction);
+    volumeProperty->SetScalarOpacity(opacityTransferFunction);
+    volumeProperty->SetGradientOpacity(gradientTransferFunction);
+    volumeProperty->ShadeOff();
+    volumeProperty->SetInterpolationTypeToLinear();
 
-    // Adding the color TF
-    property->SetColor(colorTF);
+    // Composition function
+    vtkVolumeRayCastCompositeFunction  *compositeFunction = vtkVolumeRayCastCompositeFunction::New();
 
-    // Linear interpolation for the volume s
-    property->SetInterpolationTypeToLinear();
-
-    // Raycasting Mapper
-    vtkSmartPointer<vtkFixedPointVolumeRayCastMapper> raycastingMapper =
-            vtkSmartPointer<vtkFixedPointVolumeRayCastMapper>::New();
-
-    // min intensity blending
-    raycastingMapper->SetBlendModeToMaximumIntensity();
-
-    // Get the volume from the data reader directly
-    raycastingMapper->SetInputConnection(dataReader->GetOutputPort());
+    // RayCasting Mapper
+    vtkVolumeRayCastMapper *volumeMapper = vtkVolumeRayCastMapper::New();
+    volumeMapper->SetVolumeRayCastFunction(compositeFunction);
+    volumeMapper->SetInputConnection(dataReader->GetOutputPort());
 
     // Creating a vtk volume
     vtkSmartPointer<vtkVolume> volume =
             vtkSmartPointer<vtkVolume>::New();
 
     // Add the mapper to the volume
-    volume->SetMapper(raycastingMapper);
+    volume->SetMapper(volumeMapper);
 
     // Adding the properties of the volume
-    volume->SetProperty(property);
+    volume->SetProperty(volumeProperty);
 
     // Adding the volume to the renderer
     renderer->AddViewProp(volume);

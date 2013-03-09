@@ -19,6 +19,9 @@ SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
 # @VTK
 INCLUDE(Find_VTK)
 
+# @FFTW
+INCLUDE(Find_FFTW)
+
 #########################################################
 #! Compiler Flags
 #########################################################

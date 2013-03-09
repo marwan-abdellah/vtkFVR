@@ -108,7 +108,6 @@ int main(int argc, char *argv[])
     volumeMapper->SetVolumeRayCastFunction(compositeFunction);
     volumeMapper->SetInputConnection(dataReader->GetOutputPort());
 
-
     // Creating a vtk volume
     vtkSmartPointer<vtkVolume> volume =
             vtkSmartPointer<vtkVolume>::New();
