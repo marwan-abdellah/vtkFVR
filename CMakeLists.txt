@@ -35,4 +35,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 ADD_EXECUTABLE(vtkFVR Src/vtkFVR.cxx)
 ADD_EXECUTABLE(vtkRayCaster Src/vtkRayCaster.cxx)
 ADD_EXECUTABLE(rawToVTK Src/rawToVTK.cxx)
-
+ADD_EXECUTABLE(vtkSlicer Src/vtkSlicer.cxx)
+ADD_EXECUTABLE(vtkFBO Src/vtkFBO.cxx)
+ADD_EXECUTABLE(vtkFBO_Volume Src/vtkFBO_Volume.cxx)

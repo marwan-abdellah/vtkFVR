@@ -34,5 +34,8 @@
 #include <vtkCallbackCommand.h>
 #include <vtksys/SystemTools.hxx>
 #include <vtkImageFourierFilter.h>
+#include <vtkJPEGReader.h>
+#include <vtkImageActor.h>
+#include <vtkSuperquadricSource.h>
 
 #endif // VTKINTERFACES_H
